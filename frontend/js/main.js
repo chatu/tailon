@@ -20,9 +20,9 @@ var app = new Vue({
         'command': null,
         'script': null,
 
-        'linesOfHistory': 2000,  // 0 for infinite history
+        'linesOfHistory': 0, // 0 for infinite history
         'linesToTail': 250,
-        'wrapLines': false,
+        'wrapLines': true,
 
         'hideToolbar': false,
         'showConfig': false,

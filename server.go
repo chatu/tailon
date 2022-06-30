@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"strconv"
 	"time"
+	"path/filepath"
 
 	"github.com/shurcooL/httpfs/html/vfstemplate"
 	"github.com/shurcooL/httpgzip"
@@ -72,6 +73,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unknown file", http.StatusNotFound)
 		return
 	}
+	w.Header().Set("Content-Disposition", "attachment; filename=" + filepath.Base(path))
 	http.ServeFile(w, r, path)
 }
 
