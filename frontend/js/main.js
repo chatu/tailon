@@ -42,9 +42,10 @@ var app = new Vue({
         downloadLink: function () {
             if (this.file) {
                 var suffix = 'files/?path=' + this.file.path;
+                var href = window.location.href.split('?')[0]
                 return endsWith(window.location.pathname, '/') ?
-                    window.location.href + suffix :
-                    window.location.href.replace(/[^\/]+$/, suffix);
+                    href + suffix :
+                    href.replace(/[^\/]+$/, suffix);
             }
             return '#';
         }
@@ -102,7 +103,7 @@ var app = new Vue({
         },
         refreshFiles: function () {
             console.log("updating file list");
-            this.socket.send("list");
+            this.socket.send("list" + window.location.search);
         },
         notifyBackend: function () {
             var msg = {

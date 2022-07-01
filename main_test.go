@@ -37,7 +37,7 @@ func getAliases(entries []*ListEntry) []string {
 
 func TestListingWildcard(t *testing.T) {
 	spec, _ := parseFileSpec("testdata/ex1/var/log/*.log")
-	lst := createListing([]FileSpec{spec})
+	lst := createListing([]FileSpec{spec}, "")
 
 	if len(lst["__default__"]) != 4 {
 		t.Fatalf("len(%#v) != 4\n", lst)
@@ -49,7 +49,7 @@ func TestListingWildcard(t *testing.T) {
 	}
 
 	spec, _ = parseFileSpec("alias=logs,testdata/ex1/var/log/*.log")
-	lst = createListing([]FileSpec{spec})
+	lst = createListing([]FileSpec{spec}, "")
 
 	aliases = getAliases(lst["__default__"])
 	expect := `["logs/1.log" "logs/2.log" "logs/3.log" "logs/4.log"]`
@@ -62,7 +62,7 @@ func TestListingWildcard(t *testing.T) {
 func TestListingFile(t *testing.T) {
 	spec1, _ := parseFileSpec("testdata/ex1/var/log/1.log")
 	spec2, _ := parseFileSpec("testdata/ex1/var/log/2.log")
-	lst := createListing([]FileSpec{spec1, spec2})
+	lst := createListing([]FileSpec{spec1, spec2}, "")
 
 	aliases := getAliases(lst["__default__"])
 	repr := fmt.Sprintf("%#q", aliases)
@@ -73,7 +73,7 @@ func TestListingFile(t *testing.T) {
 	spec1, _ = parseFileSpec("group=a,alias=a.log,testdata/ex1/var/log/1.log")
 	spec2, _ = parseFileSpec("group=b,alias=b.log,testdata/ex1/var/log/2.log")
 
-	lst = createListing([]FileSpec{spec1, spec2})
+	lst = createListing([]FileSpec{spec1, spec2}, "")
 	if lst["a"][0].Alias != "a.log" || !lst["a"][0].Exists {
 		t.Fatal()
 	}

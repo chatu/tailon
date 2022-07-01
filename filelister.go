@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func fileInfo(path string) *ListEntry {
 
 var allFiles map[string]bool
 
-func createListing(filespecs []FileSpec) map[string][]*ListEntry {
+func createListing(filespecs []FileSpec, desiredGroup string) map[string][]*ListEntry {
 	allFiles = make(map[string]bool)
 	res := make(map[string][]*ListEntry)
 
@@ -50,10 +51,13 @@ func createListing(filespecs []FileSpec) map[string][]*ListEntry {
 			} else {
 				entry.Alias = entry.Path
 			}
-			res[group] = append(res[group], entry)
+			if desiredGroup == "" || group == desiredGroup {
+				res[group] = append(res[group], entry)
+			}
 			allFiles[entry.Path] = true
 		case "glob":
 			matches, _ := filepath.Glob(spec.Path)
+			sort.Sort(sort.Reverse(sort.StringSlice(matches)))
 			for _, match := range matches {
 				entry := fileInfo(match)
 				if spec.Alias != "" {
@@ -63,7 +67,9 @@ func createListing(filespecs []FileSpec) map[string][]*ListEntry {
 					rel, _ := filepath.Rel(cwd, entry.Path)
 					entry.Alias = rel
 				}
-				res[group] = append(res[group], entry)
+				if desiredGroup == "" || group == desiredGroup {
+					res[group] = append(res[group], entry)
+				}
 				allFiles[entry.Path] = true
 			}
 		}

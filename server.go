@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/bformet/tailon/cmd"
 	"github.com/bformet/tailon/frontend"
@@ -11,11 +12,12 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
-	"path/filepath"
 
 	"github.com/shurcooL/httpfs/html/vfstemplate"
 	"github.com/shurcooL/httpgzip"
@@ -73,7 +75,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unknown file", http.StatusNotFound)
 		return
 	}
-	w.Header().Set("Content-Disposition", "attachment; filename=" + filepath.Base(path))
+	w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(path))
 	http.ServeFile(w, r, path)
 }
 
@@ -125,8 +127,8 @@ func wsWriter(session sockjs.Session, messages chan string, done <-chan struct{}
 	for {
 		select {
 		case msg := <-messages:
-			if msg == "list" {
-				lst := createListing(config.FileSpecs)
+			if strings.HasPrefix(msg, "list") {
+				lst := createListing(config.FileSpecs, parseGroup(msg))
 				b, err := json.Marshal(lst)
 				if err != nil {
 					log.Println("error: ", err)
@@ -165,6 +167,16 @@ func wsWriter(session sockjs.Session, messages chan string, done <-chan struct{}
 			return
 		}
 	}
+}
+
+func parseGroup(msg string) string {
+	group := ""
+	parts := strings.Split(msg, "?")
+	if length := len(parts); length > 1 {
+		query, _ := url.ParseQuery(parts[1])
+		group = query.Get("group")
+	}
+	return group
 }
 
 // Expands the variables in main.CommandSpec.Action with the values in the

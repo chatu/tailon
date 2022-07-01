@@ -120,12 +120,7 @@ type CommandSpec struct {
 	Default string
 }
 
-func parseTomlConfig(config string) (*toml.Tree, map[string]CommandSpec) {
-	cfg, err := toml.Load(config)
-	if err != nil {
-		log.Fatal("Error parsing config: ", err)
-	}
-
+func parseCommandSpecs(cfg *toml.Tree) map[string]CommandSpec {
 	commands := make(map[string]CommandSpec)
 
 	cfgCommands := cfg.Get("commands").(*toml.Tree).ToMap()
@@ -138,7 +133,27 @@ func parseTomlConfig(config string) (*toml.Tree, map[string]CommandSpec) {
 		commands[key] = command
 	}
 
-	return cfg, commands
+	return commands
+}
+
+func parseFileSpecs(cfg *toml.Tree) []FileSpec {
+	files := cfg.Get("files")
+	if files == nil {
+		return nil
+	}
+
+	cfgFiles := files.([]interface{})
+	fileSpecs := make([]FileSpec, len(cfgFiles))
+
+	for i := range cfgFiles {
+		fileSpec, err := parseFileSpec(cfgFiles[i].(string))
+		if err != nil {
+			log.Fatal(err)
+		}
+		fileSpecs[i] = fileSpec
+	}
+
+	return fileSpecs
 }
 
 // FileSpec is an instance of a file to be monitored. These are mapped to
@@ -212,10 +227,13 @@ type Config struct {
 }
 
 func makeConfig(configContent string) *Config {
-	defaults, commandSpecs := parseTomlConfig(configContent)
+	cfg, err := toml.Load(configContent)
+	if err != nil {
+		log.Fatal("Error parsing config: ", err)
+	}
 
 	// Convert the list of bind addresses from []interface{} to []string.
-	addrsA := defaults.Get("listen-addr").([]interface{})
+	addrsA := cfg.Get("listen-addr").([]interface{})
 	addrsB := make([]string, len(addrsA))
 	for i := range addrsA {
 		addrsB[i] = addrsA[i].(string)
@@ -223,12 +241,13 @@ func makeConfig(configContent string) *Config {
 
 	config := Config{
 		BindAddr:      addrsB,
-		RelativeRoot:  defaults.Get("relative-root").(string),
-		AllowDownload: defaults.Get("allow-download").(bool),
-		CommandSpecs:  commandSpecs,
+		RelativeRoot:  cfg.Get("relative-root").(string),
+		AllowDownload: cfg.Get("allow-download").(bool),
+		CommandSpecs:  parseCommandSpecs(cfg),
+		FileSpecs:     parseFileSpecs(cfg),
 	}
 
-	mapstructure.Decode(defaults.Get("allow-commands"), &config.AllowCommandNames)
+	mapstructure.Decode(cfg.Get("allow-commands"), &config.AllowCommandNames)
 	return &config
 }
 
@@ -280,7 +299,7 @@ func main() {
 	config.RelativeRoot = strings.TrimRight(config.RelativeRoot, "/") + "/"
 
 	// Handle command-line file specs
-	filespecs := make([]FileSpec, len(flag.Args()))
+	var filespecs []FileSpec
 	for _, spec := range flag.Args() {
 		if filespec, err := parseFileSpec(spec); err != nil {
 			fmt.Fprintf(os.Stderr, "Error parsing argument '%s': %s\n", spec, err)
@@ -288,8 +307,10 @@ func main() {
 		} else {
 			filespecs = append(filespecs, filespec)
 		}
+
 	}
-	config.FileSpecs = filespecs
+
+	config.FileSpecs = append(config.FileSpecs, filespecs...)
 
 	if len(config.FileSpecs) == 0 {
 		fmt.Fprintln(os.Stderr, "No files specified on command-line or in config file")
@@ -300,10 +321,6 @@ func main() {
 	for cmd, values := range config.CommandSpecs {
 		config.CommandScripts[cmd] = values.Default
 	}
-
-	logger := log.New(os.Stdout, "", log.LstdFlags)
-	logger.Print("Generate initial file listing")
-	createListing(config.FileSpecs)
 
 	var wg sync.WaitGroup
 	for _, addr := range config.BindAddr {
