@@ -17,6 +17,13 @@ type ListEntry struct {
 	Exists  bool      `json:"exists"`
 }
 
+// Listing represents entries and groups for UI selection.
+type Listing struct {
+	Entries map[string][]*ListEntry `json:"entries"`
+	Groups  map[string]bool         `json:"groups"`
+	Grouped bool                    `json:"grouped"`
+}
+
 func fileInfo(path string) *ListEntry {
 	entry := ListEntry{}
 	entry.Path = path
@@ -33,9 +40,10 @@ func fileInfo(path string) *ListEntry {
 
 var allFiles map[string]bool
 
-func createListing(filespecs []FileSpec, desiredGroup string) map[string][]*ListEntry {
+func createListing(filespecs []FileSpec, desiredGroup string) *Listing {
 	allFiles = make(map[string]bool)
-	res := make(map[string][]*ListEntry)
+	groups := make(map[string]bool)
+	entries := make(map[string][]*ListEntry)
 
 	for _, spec := range filespecs {
 		group := "__default__"
@@ -52,8 +60,9 @@ func createListing(filespecs []FileSpec, desiredGroup string) map[string][]*List
 				entry.Alias = entry.Path
 			}
 			if desiredGroup == "" || group == desiredGroup {
-				res[group] = append(res[group], entry)
+				entries[group] = append(entries[group], entry)
 			}
+			groups[group] = (group == desiredGroup)
 			allFiles[entry.Path] = true
 		case "glob":
 			matches, _ := filepath.Glob(spec.Path)
@@ -68,14 +77,15 @@ func createListing(filespecs []FileSpec, desiredGroup string) map[string][]*List
 					entry.Alias = rel
 				}
 				if desiredGroup == "" || group == desiredGroup {
-					res[group] = append(res[group], entry)
+					entries[group] = append(entries[group], entry)
 				}
+				groups[group] = (group == desiredGroup)
 				allFiles[entry.Path] = true
 			}
 		}
 	}
 
-	return res
+	return &Listing{entries, groups, desiredGroup == ""}
 }
 
 func fileAllowed(path string) bool {

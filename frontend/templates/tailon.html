@@ -10,14 +10,29 @@
 </script>
 
 <div id="app">
+    <div id="group-menu">
+        <ul>
+            <li v-for="group in Object.keys(groups)">
+                <a :class="{ 'active': groups[group] }" :href="'/?group=' + group" v-html="group"></a>
+            </li>
+            <li v-if="!grouped" style="float:right"><a href="/">All</a></li>
+        </ul>
+    </div>
+
     <transition name="fade">
         <div v-if="!hideToolbar" id="toolbar">
             <div class="tailon-dark toolbar-item toolbar-item-fill" id="file-select">
-                <multiselect v-model="file" :options="fileList"
-                             :group-select="true"
+                <multiselect v-if="grouped" v-model="file" :options="fileList"
+                             :group-select="false"
                              :allow-empty="false"
                              group-values="files"
                              group-label="group"
+                             track-by="alias"
+                             label="alias"
+                             @open="refreshFiles"
+                             :searchable="true" :show-labels="false" placeholder="File"></multiselect>
+                <multiselect v-else v-model="file" :options="fileList"
+                             :allow-empty="false"
                              track-by="alias"
                              label="alias"
                              @open="refreshFiles"

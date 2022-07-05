@@ -13,6 +13,8 @@ var app = new Vue({
         'commandScripts': commandScripts,
 
         'fileList': [],
+        'groups': [],
+        'grouped': false,
         'allowCommandNames': allowCommandNames,
         'allowDownload': allowDownload,
 
@@ -81,15 +83,17 @@ var app = new Vue({
             if (data.constructor === Object) {
                 // Reshape into something that vue-multiselect :group-select can use.
                 var fileList = [];
-                Object.keys(data).forEach(function (key) {
+                Object.keys(data.entries).forEach(function (key) {
                     var group = ("__default__" === key) ? "Ungrouped Files" : key;
                     fileList.push({
                         "group": group,
-                        "files": data[key]
+                        "files": data.entries[key]
                     });
                 });
 
-                this.fileList = fileList;
+                this.fileList =  data.grouped ? fileList : fileList[0].files;
+                this.groups = data.groups;
+                this.grouped = data.grouped;
 
                 // Set file input to first entry in list.
                 if (!this.file) {
